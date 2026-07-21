@@ -1,48 +1,38 @@
-import whisper
-from whisper.utils import format_timestamp
-import os
-import csv
-import time
-import torch
+from django.shortcuts import render
 from os import listdir
 from os.path import isfile, join
 import shutil
 from pathlib import Path
+import csv
+import os
+import time
+from whisper.utils import format_timestamp
+import torch
+import whisper
 
-start_time = time.perf_counter()
-BASE_DIR = Path(__file__).resolve().parent 
-UPLOAD_DIR = BASE_DIR / "upload"
-DONE_DIR = BASE_DIR / "done"
-CSV_DIR = BASE_DIR / "csv_file"
-SRT_DIR = BASE_DIR / "srt_files"
-LOG_DIR = BASE_DIR / "logs"
-
-
-for d in (UPLOAD_DIR, DONE_DIR, CSV_DIR, SRT_DIR,NEW):
-    os.makedirs(d,exist_ok=True)
-
-
-def get_files():
-    
-    print(BASE_DIR)
-    print("hello")
-    dir=r"C:\Users\shantu\Desktop\my_works\transbribe\upload"
+def get_files(dir):
+    if not dir or not os.path.isdir(dir):
+        
+        return []
     onlyfiles = [os.path.join(dir, f) for f in os.listdir(dir) if 
-    os.path.isfile(os.path.join(dir, f))]
+                 os.path.isfile(os.path.join(dir, f))]
+    print(onlyfiles)
+    model_run(onlyfiles)
     return onlyfiles
+# Create your views here.
+def home(request):
+       folder_path = request.GET.get("path", "")
+       files=get_files(folder_path)
+    
+       return render(request, "home.html", {
+        "folder_path": folder_path
+    })
 
-
-
-
-
-# Load Whisper model
-
-print("Loading Whisper model...")
-
-
-print("Transcribing video...")
-
-def model_run():
+def model_run(PATHS):
+    BASE_DIR = Path(__file__).resolve().parent 
+    CSV_DIR = BASE_DIR / "csv_file"
+    SRT_DIR = BASE_DIR / "srt_files"
+    print([BASE_DIR,CSV_DIR,SRT_DIR])
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(torch.cuda.is_available())
 
@@ -51,9 +41,10 @@ def model_run():
 
     model = whisper.load_model(MODEL_NAME).to(device)
 
-    PATHS= get_files()
+    
 
     for VIDEO_PATH in PATHS:
+        print(VIDEO_PATH)
         result = model.transcribe(
     VIDEO_PATH,
     language="en",
@@ -62,7 +53,7 @@ def model_run():
 )
 
 
-        # Output filenames
+#         # Output filenames
 
         base_name = os.path.splitext(os.path.basename(VIDEO_PATH))[0]
 
@@ -71,8 +62,10 @@ def model_run():
         print("starting to save as csv")
 
         # Save csv transcript
-        csv_file="C:\\Users\\shantu\\Desktop\\my_works\\transbribe\\csv_file\\"+csv_file
-        with open(csv_file, "w", newline="",encoding="utf-8") as f:
+        
+        print(csv_file)
+        
+        with open(CSV_DIR/csv_file, "w", newline="",encoding="utf-8") as f:
             writer = csv.writer(f)
 
             # Header
@@ -86,13 +79,13 @@ def model_run():
                     segment["text"].strip()
                 ])
                 
-        shutil.move(VIDEO_PATH,"C:\\Users\\shantu\\Desktop\\my_works\\transbribe\\done\\"+base_name+".mp4")
+        
         print(f"\nTranscript saved as: {csv_file}")
 
 
 # Save SRT subtitles
 
-        with open("C:\\Users\\shantu\\Desktop\\my_works\\transbribe\\srt_files\\"+srt_file, "w", encoding="utf-8") as f:
+        with open(SRT_DIR/srt_file, "w", encoding="utf-8") as f:
 
 
             for i, segment in enumerate(result["segments"], start=1):
@@ -116,8 +109,4 @@ def model_run():
                 f.write(f"{text}\n\n")
 
         print(f"Subtitle saved as: {srt_file}")
-model_run()
-print("\nDone!")
-end_time=time.perf_counter()
-
-print(f"Execution time: {end_time-start_time:.6f} seconds")
+    
