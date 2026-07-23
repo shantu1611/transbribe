@@ -8,7 +8,7 @@ class videos(models.Model):
 
 
 class transcribes(models.Model):
-    id=models.ForeignKey(videos,name="videos",on_delete=models.CASCADE,to_field="video_id")
+    v_id=models.ForeignKey(videos,on_delete=models.CASCADE,to_field="video_id")
     start=models.DurationField(null=True)
     end=models.DurationField(null=True)
     text = models.TextField()
